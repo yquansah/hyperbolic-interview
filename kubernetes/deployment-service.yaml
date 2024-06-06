@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hyperbolic-interview
+  labels:
+    app: hyperbolic-interview
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hyperbolic-interview
+  template:
+    metadata:
+      labels:
+        app: hyperbolic-interview
+    spec:
+      serviceAccountName: argo-app-manager
+      containers:
+        - name: hyperbolic-interview
+          image: hyperbolic-interview:latest
+          imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hyperbolic-interview
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: hyperbolic-interview

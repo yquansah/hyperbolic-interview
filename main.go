@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -25,6 +26,26 @@ type ArgoAppCreateModel struct {
 	RepositoryURL   string `json:"repositoryURL"`
 	ClusterURL      string `json:"clusterURL"`
 	Path            string `json:"path"`
+}
+
+func (a ArgoAppCreateModel) validate() error {
+	if a.ApplicationName == "" {
+		return errors.New("application name is missing")
+	}
+
+	if a.RepositoryURL == "" {
+		return errors.New("repository url is missing")
+	}
+
+	if a.ClusterURL == "" {
+		return errors.New("cluster url is missing")
+	}
+
+	if a.Path == "" {
+		return errors.New("path is missing")
+	}
+
+	return nil
 }
 
 type handler struct {
@@ -68,6 +89,12 @@ func (h *handler) createArgoApplication(w http.ResponseWriter, r *http.Request) 
 
 	if err := json.NewDecoder(r.Body).Decode(&aCreateModel); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := aCreateModel.validate(); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
