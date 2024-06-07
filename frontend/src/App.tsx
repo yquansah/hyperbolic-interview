@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 function App() {
-  const [argoApps, setArgoApps] = useState<Array<string> | null>(null);
+  const [argoApps, setArgoApps] = useState<Array<any> | null>(null);
   const [reload, setReload] = useState<boolean>(false);
   const [applicationName, setApplicationName] = useState<string>("");
   const [repoURL, setRepoURL] = useState<string>("");
@@ -16,6 +16,7 @@ function App() {
     const response = await fetch("/argo/list");
     const data = await response.json();
 
+    console.log(data);
     setArgoApps(data);
   }
 
@@ -97,27 +98,39 @@ function App() {
             Create
           </button>
         </form>
-        {argoApps?.map((argoApp, i) => (
-          <>
-            <div
-              key={i}
-              className="flex items-center space-x-4 border border-1 border-black p-4"
-            >
-              <div>{i + 1}.</div>
-              <div>{argoApp}</div>
-              <button
-                className="bg-red-300 px-4 py-2 rounded-md"
-                onClick={async (e) => {
-                  e.preventDefault();
-                  await deleteArgoApplication(argoApp);
-                  triggerReload();
-                }}
+        <div className="flex flex-col items-center justify-center space-y-4">
+          {argoApps?.map((argoApp, i) => (
+            <>
+              <div
+                key={i}
+                className="flex items-center justify-between space-x-4 border border-1 border-black p-4"
               >
-                Delete
-              </button>
-            </div>
-          </>
-        ))}
+                <p>{i + 1}.</p>
+                <p>{argoApp.name}</p>
+                <p
+                  className={`font-bold text-2xl ${
+                    argoApp.status === "Healthy"
+                      ? "text-green-300"
+                      : "text-red-400"
+                  }`}
+                >
+                  {argoApp.status}
+                </p>
+                <p className="text-2xl">{argoApp.createdAt}</p>
+                <button
+                  className="bg-red-300 px-4 py-2 rounded-md"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    await deleteArgoApplication(argoApp.name);
+                    triggerReload();
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </>
+          ))}
+        </div>
       </div>
     </>
   );

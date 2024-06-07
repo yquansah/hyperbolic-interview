@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -25,6 +26,12 @@ type ArgoAppCreateModel struct {
 	RepositoryURL   string `json:"repositoryURL"`
 	ClusterURL      string `json:"clusterURL"`
 	Path            string `json:"path"`
+}
+
+type ArgoApp struct {
+	Name      string `json:"name"`
+	Status    string `json:"status"`
+	CreatedAt string `json:"createdAt"`
 }
 
 func (a ArgoAppCreateModel) validate() error {
@@ -76,10 +83,14 @@ func (h *handler) listArgoApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	argoApplications := make([]string, 0, len(appList.Items))
+	argoApplications := make([]*ArgoApp, 0, len(appList.Items))
 
 	for _, a := range appList.Items {
-		argoApplications = append(argoApplications, a.Name)
+		argoApplications = append(argoApplications, &ArgoApp{
+			Name:      a.GetName(),
+			Status:    string(a.Status.Health.Status),
+			CreatedAt: a.GetCreationTimestamp().String(),
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -191,6 +202,7 @@ func run() error {
 	http.HandleFunc("/argo/create", h.createArgoApplication)
 	http.HandleFunc("/argo/delete/{applicationName}", h.deleteArgoApplication)
 
+	fmt.Println("Serving on port 8080")
 	return http.ListenAndServe(":8080", nil)
 }
 

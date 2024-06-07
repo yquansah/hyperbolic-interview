@@ -19,6 +19,9 @@ spec:
         - name: hyperbolic-interview
           image: hyperbolic-interview:latest
           imagePullPolicy: IfNotPresent
+          env:
+            - name: IN_CLUSTER
+              value: "true"
 ---
 apiVersion: v1
 kind: Service
