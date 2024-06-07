@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -12,7 +12,7 @@ import (
 
 	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
-	"github.com/go-chi/chi/v5"
+	"github.com/yquansah/hyperbolic-interview/frontend"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -54,7 +54,7 @@ type handler struct {
 }
 
 func (h *handler) deleteArgoApplication(w http.ResponseWriter, r *http.Request) {
-	appName := chi.URLParam(r, "applicationName")
+	appName := r.PathValue("applicationName")
 	ctx := r.Context()
 
 	err := h.argoClientSet.ArgoprojV1alpha1().Applications(h.namespace).Delete(ctx, appName, v1.DeleteOptions{})
@@ -77,8 +77,17 @@ func (h *handler) listArgoApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	argoApplications := make([]string, 0, len(appList.Items))
+
 	for _, a := range appList.Items {
-		fmt.Println(a.Name)
+		argoApplications = append(argoApplications, a.Name)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := json.NewEncoder(w).Encode(argoApplications); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -94,7 +103,7 @@ func (h *handler) createArgoApplication(w http.ResponseWriter, r *http.Request) 
 
 	if err := aCreateModel.validate(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -167,19 +176,15 @@ func run() error {
 		namespace:     "argocd",
 	}
 
-	mux := chi.NewMux()
-	mux.Get("/argo/list", h.listArgoApplication)
-	mux.Post("/argo/create", h.createArgoApplication)
-	mux.Delete("/argo/delete/{applicationName}", h.deleteArgoApplication)
+	dist, _ := fs.Sub(frontend.Dist, "dist")
+	fileServer := http.FileServer(http.FS(dist))
 
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
-	}
+	http.Handle("/", fileServer)
+	http.HandleFunc("/argo/list", h.listArgoApplication)
+	http.HandleFunc("/argo/create", h.createArgoApplication)
+	http.HandleFunc("/argo/delete/{applicationName}", h.deleteArgoApplication)
 
-	fmt.Println("Listening at port 8080")
-
-	return server.ListenAndServe()
+	return http.ListenAndServe(":8080", nil)
 }
 
 func main() {

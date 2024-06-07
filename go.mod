@@ -1,10 +1,9 @@
 module github.com/yquansah/hyperbolic-interview
 
-go 1.21.6
+go 1.22.4
 
 require (
 	github.com/argoproj/argo-cd/v2 v2.11.3
-	github.com/go-chi/chi/v5 v5.0.12
 	k8s.io/apimachinery v0.26.11
 	k8s.io/client-go v0.26.11
 )
