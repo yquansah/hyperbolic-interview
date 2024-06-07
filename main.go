@@ -15,7 +15,6 @@ import (
 	"github.com/yquansah/hyperbolic-interview/frontend"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
@@ -140,8 +139,7 @@ func (h *handler) createArgoApplication(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusOK)
 }
 
-func run() error {
-	var config *rest.Config
+func getNonClusterConfig() *rest.Config {
 	var kubeconfig *string
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -151,19 +149,28 @@ func run() error {
 
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
-		return err
+		panic(err)
 	}
+
+	return config
+}
+
+func getClusterConfig() *rest.Config {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	return config
+}
+
+func run() error {
+	var config *rest.Config
 
 	if os.Getenv("IN_CLUSTER") == "true" {
-		config, err = rest.InClusterConfig()
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err = kubernetes.NewForConfig(config)
-	if err != nil {
-		return err
+		config = getClusterConfig()
+	} else {
+		config = getNonClusterConfig()
 	}
 
 	argoClientSet, err := versioned.NewForConfig(config)
